@@ -22,15 +22,15 @@ import ChatPanel from '@/components/chat/ChatPanel.vue'
   background: var(--color-bg);
 }
 .live2d-pane {
-  flex: 1;
+  flex: 0 0 35%;
   min-width: 0;
   height: 100%;
   position: relative;
 }
 .chat-pane {
-  width: 400px;
+  flex: 1;
   height: 100%;
-  flex-shrink: 0;
+  min-width: 0;
   border-left: 1px solid var(--color-border);
 }
 

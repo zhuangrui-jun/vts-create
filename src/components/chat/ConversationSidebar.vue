@@ -50,7 +50,7 @@ function handleDelete(id: string) {
 .sidebar {
   display: flex;
   flex-direction: column;
-  width: 260px;
+  width: 220px;
   background: var(--color-bg-secondary);
   border-right: 1px solid var(--color-border);
   flex-shrink: 0;
@@ -65,7 +65,7 @@ function handleDelete(id: string) {
   justify-content: center;
   gap: 6px;
   width: 100%;
-  padding: 10px 0;
+  padding: 8px 0;
   border: 1px dashed var(--color-primary);
   border-radius: var(--radius-md);
   background: transparent;
@@ -93,7 +93,7 @@ function handleDelete(id: string) {
 .conv-item {
   display: flex;
   align-items: center;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background var(--transition-fast);

@@ -4,6 +4,8 @@ import { useChatApi } from '@/composables/useChatApi'
 import { useLive2dStore } from '@/stores/live2dStore'
 import type { ConversationListItemData, MessageData } from '@/types/chat'
 
+let _nextOptimisticId = -1
+
 export const useChatStore = defineStore('chat', () => {
   const api = useChatApi()
   const live2dStore = useLive2dStore()
@@ -51,7 +53,6 @@ export const useChatStore = defineStore('chat', () => {
       const conv = await api.getConversation(id)
       activeConversationId.value = id
       messages.value = conv.messages
-      // Update title in list if changed
       const idx = conversations.value.findIndex(c => c.id === id)
       if (idx !== -1) {
         conversations.value[idx] = {
@@ -85,33 +86,83 @@ export const useChatStore = defineStore('chat', () => {
   async function sendMessage(content: string) {
     const convId = activeConversationId.value
     if (!convId) {
-      // Auto-create conversation if none active
       await createConversation()
       return sendMessage(content)
     }
 
     isSending.value = true
     error.value = null
-    try {
-      const result = await api.sendMessage(convId, content)
-      messages.value.push(result.message)
-      messages.value.push(result.response)
 
-      // Trigger Live2D expression
-      if (result.response.expression) {
-        live2dStore.setExpression(result.response.expression)
-      }
-
-      // Update conversation in list (title may have changed, updated_at changed)
-      const idx = conversations.value.findIndex(c => c.id === convId)
-      if (idx !== -1) {
-        conversations.value[idx].updated_at = result.response.created_at
-      }
-    } catch (e: any) {
-      error.value = e.message
-    } finally {
-      isSending.value = false
+    // Optimistic user message
+    const optimisticUserMsg: MessageData = {
+      id: _nextOptimisticId--,
+      conversation_id: convId,
+      role: 'user',
+      content,
+      emotion: null,
+      expression: null,
+      created_at: new Date().toISOString(),
     }
+    messages.value.push(optimisticUserMsg)
+
+    // Placeholder assistant message
+    const assistantMsg: MessageData = {
+      id: _nextOptimisticId--,
+      conversation_id: convId,
+      role: 'assistant',
+      content: '',
+      emotion: null,
+      expression: null,
+      created_at: new Date().toISOString(),
+    }
+    messages.value.push(assistantMsg)
+
+    await api.sendMessageStream(convId, content, {
+      onUserMessage(data) {
+        // Replace optimistic user message with real one
+        const idx = messages.value.findIndex(m => m.id === optimisticUserMsg.id)
+        if (idx !== -1) {
+          messages.value[idx] = { ...messages.value[idx], id: data.id, created_at: data.created_at }
+        }
+      },
+      onToken(token) {
+        // Find the last assistant message (placeholder) and append
+        const last = messages.value[messages.value.length - 1]
+        if (last && last.role === 'assistant') {
+          last.content += token
+        }
+      },
+      onDone(data) {
+        // Update assistant message with final metadata
+        const last = messages.value[messages.value.length - 1]
+        if (last && last.role === 'assistant') {
+          last.id = data.assistant_message_id
+          last.emotion = data.emotion
+          last.expression = data.expression
+        }
+        // Trigger Live2D expression
+        if (data.expression) {
+          live2dStore.setExpression(data.expression)
+        }
+        // Refresh conversation list (title/updated_at may have changed)
+        const idx = conversations.value.findIndex(c => c.id === convId)
+        if (idx !== -1) {
+          conversations.value[idx] = {
+            ...conversations.value[idx],
+            updated_at: new Date().toISOString(),
+          }
+        }
+        isSending.value = false
+      },
+      onError(err) {
+        // Remove optimistic messages on error
+        messages.value = messages.value.filter(
+          m => m.id !== optimisticUserMsg.id && m.id !== assistantMsg.id,
+        )
+        error.value = err.message
+        isSending.value = false
+      },
+    })
   }
 
   function clearError() {

@@ -3,13 +3,6 @@ dist/
 .env
 .env.*
 !.env.example
-claude
-cursor/
-openspec/
-
-# Python
-__pycache__/
-*.pyc
-.venv/
-venv/
-backend/data/
+.claude/
+.cursor/
+720/

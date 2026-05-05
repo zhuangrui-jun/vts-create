@@ -103,7 +103,15 @@
       "Bash(D:/python/python.exe *)",
       "Bash(openspec new *)",
       "Bash(openspec status *)",
-      "Bash(openspec instructions *)"
+      "Bash(openspec instructions *)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('app/api/routes.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(mkdir -p openspec/changes/archive)",
+      "Bash(mv openspec/changes/ai-character-dialogue openspec/changes/archive/2026-05-05-ai-character-dialogue)",
+      "Bash(cp -r openspec/changes/ai-character-dialogue openspec/changes/archive/2026-05-05-ai-character-dialogue)",
+      "Bash(rm -rf openspec/changes/ai-character-dialogue)",
+      "Bash(sqlite3 *)",
+      "Bash(python3 *)",
+      "Bash(/c/Users/22689/AppData/Local/Programs/Python/Python*/python.exe --version)"
     ]
   }
 }
