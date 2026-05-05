@@ -13,6 +13,8 @@ export interface MessageData {
   emotion: string | null
   expression: string | null
   created_at: string
+  sticker_path?: string
+  sticker_file_name?: string
 }
 
 export interface ConversationData {
@@ -53,11 +55,18 @@ export interface StreamDoneEvent {
   assistant_message_id: number
 }
 
-export type StreamEvent = StreamUserMessageEvent | StreamTokenEvent | StreamDoneEvent
+export interface StreamStickerEvent {
+  type: 'sticker'
+  file_name: string
+  path: string
+}
+
+export type StreamEvent = StreamUserMessageEvent | StreamTokenEvent | StreamDoneEvent | StreamStickerEvent
 
 export interface StreamCallbacks {
   onUserMessage?: (data: StreamUserMessageEvent) => void
   onToken: (content: string) => void
   onDone: (data: StreamDoneEvent) => void
+  onSticker?: (data: StreamStickerEvent) => void
   onError: (error: Error) => void
 }

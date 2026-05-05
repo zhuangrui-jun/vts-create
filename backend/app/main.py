@@ -6,6 +6,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.db.database import init_db
 from app.api.routes import router
 
@@ -43,3 +44,8 @@ app.add_middleware(
 )
 
 app.include_router(router)
+
+# Serve sticker GIFs
+sticker_dir = Path(__file__).resolve().parent.parent.parent / "720"
+if sticker_dir.is_dir():
+    app.mount("/720", StaticFiles(directory=str(sticker_dir)), name="stickers")

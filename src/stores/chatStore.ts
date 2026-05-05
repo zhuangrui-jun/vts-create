@@ -154,6 +154,13 @@ export const useChatStore = defineStore('chat', () => {
         }
         isSending.value = false
       },
+      onSticker(data) {
+        const last = messages.value[messages.value.length - 1]
+        if (last && last.role === 'assistant') {
+          last.sticker_path = data.path
+          last.sticker_file_name = data.file_name
+        }
+      },
       onError(err) {
         // Remove optimistic messages on error
         messages.value = messages.value.filter(

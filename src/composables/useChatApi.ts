@@ -69,6 +69,9 @@ export function useChatApi() {
               case 'done':
                 callbacks.onDone(data)
                 break
+              case 'sticker':
+                callbacks.onSticker?.(data)
+                break
             }
           }
         }

@@ -9,6 +9,7 @@ from openai import OpenAI
 from app.db.database import get_session_factory
 from app.db.models import Conversation, Message
 from app.config.emotion_mapping import resolve_expression, normalize_emotion
+from app.config.sticker_index import match_sticker
 from app.api.schemas import (
     ConversationOut,
     ConversationListItem,
@@ -207,6 +208,12 @@ def send_message_stream(
             new_db.refresh(assistant_msg)
 
             yield f"data: {json.dumps({'type': 'done', 'emotion': emotion, 'expression': expression, 'user_message_id': user_msg.id, 'assistant_message_id': assistant_msg.id})}\n\n"
+
+            # Select and emit sticker asynchronously (after text)
+            sticker = match_sticker(body.content)
+            if sticker:
+                file_name, path = sticker
+                yield f"data: {json.dumps({'type': 'sticker', 'file_name': file_name, 'path': path})}\n\n"
         finally:
             new_db.close()
 

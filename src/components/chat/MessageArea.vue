@@ -38,6 +38,12 @@ watch(() => store.isSending, (sending) => {
         </div>
         <div class="bubble" :class="msg.role">
           {{ msg.content }}
+          <img
+            v-if="msg.role === 'assistant' && msg.sticker_path"
+            :src="'http://localhost:8000/' + msg.sticker_path"
+            :alt="msg.sticker_file_name || 'sticker'"
+            class="sticker-img"
+          />
         </div>
       </div>
 
@@ -119,6 +125,12 @@ watch(() => store.isSending, (sending) => {
   color: var(--color-text-primary);
   border: 1px solid var(--color-border);
   border-bottom-left-radius: 4px;
+}
+.sticker-img {
+  display: block;
+  max-width: 160px;
+  margin-top: 8px;
+  border-radius: var(--radius-sm);
 }
 .error-banner {
   padding: 8px 14px;
