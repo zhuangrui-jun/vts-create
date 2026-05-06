@@ -111,7 +111,13 @@
       "Bash(rm -rf openspec/changes/ai-character-dialogue)",
       "Bash(sqlite3 *)",
       "Bash(python3 *)",
-      "Bash(/c/Users/22689/AppData/Local/Programs/Python/Python*/python.exe --version)"
+      "Bash(/c/Users/22689/AppData/Local/Programs/Python/Python*/python.exe --version)",
+      "WebFetch(domain:bocha-ai.feishu.cn)",
+      "Bash(python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload)",
+      "Read(//tmp/**)",
+      "Bash(nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000)",
+      "Bash(python *)",
+      "Bash(openspec list *)"
     ]
   }
 }

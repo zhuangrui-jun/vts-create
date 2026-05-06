@@ -1,4 +1,4 @@
-from typing import TypedDict
+from typing import TypedDict, Optional
 
 
 class GraphState(TypedDict):
@@ -8,3 +8,8 @@ class GraphState(TypedDict):
     response_text: str
     emotion: str
     expression: str
+    # Search tool fields
+    assembled_messages: list[dict]
+    search_query: Optional[str]
+    search_results: Optional[str]
+    needs_search: bool

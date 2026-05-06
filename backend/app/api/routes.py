@@ -187,18 +187,19 @@ def send_message_stream(
     for m in window_msgs:
         messages.append({"role": m["role"], "content": m["content"]})
 
-    def generate():
+    def _stream_response(msg_list, skip_user_event=False):
+        """Stream LLM tokens. Search context is already injected by the graph."""
         client = _get_llm_client()
         model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
-        # Send user message info first
-        yield f"data: {json.dumps({'type': 'user_message', 'id': user_msg.id, 'content': user_msg.content, 'created_at': user_msg.created_at.isoformat()})}\n\n"
+        if not skip_user_event:
+            yield f"data: {json.dumps({'type': 'user_message', 'id': user_msg.id, 'content': user_msg.content, 'created_at': user_msg.created_at.isoformat()})}\n\n"
 
-        # Stream LLM tokens
         full_text = ""
+
         stream = client.chat.completions.create(
             model=model,
-            messages=messages,
+            messages=msg_list,
             temperature=0.8,
             max_tokens=512,
             stream=True,
@@ -211,8 +212,38 @@ def send_message_stream(
                 full_text += delta.content
                 yield f"data: {json.dumps({'type': 'token', 'content': delta.content})}\n\n"
 
+        return full_text
+
+    def generate():
+        # Invoke LangGraph to assemble context (with optional web search)
+        logger.info("Invoking LangGraph for search decision...")
+        from app.graph.graph import build_graph
+        graph = build_graph()
+        initial_state = {
+            "conversation_id": conv_id,
+            "user_message": body.content,
+            "history_messages": messages,
+            "response_text": "",
+            "emotion": "",
+            "expression": "",
+            "assembled_messages": [],
+            "search_query": None,
+            "search_results": None,
+            "needs_search": False,
+        }
+        final_state = graph.invoke(initial_state)
+        assembled_messages = final_state["assembled_messages"]
+        if final_state.get("needs_search"):
+            logger.info("Web search executed for query: %s", final_state.get("search_query"))
+
+        # Single streaming pass
+        full_text = yield from _stream_response(assembled_messages)
+
         # Extract emotion from full response
-        emotion = _extract_emotion(full_text)
+        if full_text.strip():
+            emotion = _extract_emotion(full_text)
+        else:
+            emotion = "neutral"
         expression = resolve_expression(emotion)
 
         # Persist assistant message
@@ -231,7 +262,6 @@ def send_message_stream(
 
             yield f"data: {json.dumps({'type': 'done', 'emotion': emotion, 'expression': expression, 'user_message_id': user_msg.id, 'assistant_message_id': assistant_msg.id})}\n\n"
 
-            # Select and emit sticker asynchronously (after text)
             sticker = match_sticker(body.content)
             if sticker:
                 file_name, path = sticker
