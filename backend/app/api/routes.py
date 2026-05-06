@@ -10,6 +10,7 @@ from app.db.database import get_session_factory
 from app.db.models import Conversation, Message
 from app.config.emotion_mapping import resolve_expression, normalize_emotion
 from app.config.sticker_index import match_sticker
+from app.config.text_utils import tokenize
 from app.api.schemas import (
     ConversationOut,
     ConversationListItem,
@@ -157,13 +158,34 @@ def send_message_stream(
     db.commit()
     db.refresh(user_msg)
 
-    # Build message history for LLM context
-    history = [
-        {"role": m.role, "content": m.content}
+    # Build LLM context: sliding window (last 5 rounds) + keyword retrieval for older messages
+    WINDOW_ROUNDS = 5
+    all_history = [
+        {"role": m.role, "content": m.content, "id": m.id}
         for m in conv.messages
     ]
+    window_size = WINDOW_ROUNDS * 2  # 5 user + 5 assistant
+    window_msgs = all_history[-window_size:] if len(all_history) > window_size else all_history
+    older_msgs = all_history[:-window_size] if len(all_history) > window_size else []
+
+    # Keyword retrieve from older messages
+    retrieved = []
+    if older_msgs:
+        tokens = tokenize(body.content)
+        seen_ids = set()
+        for token in tokens[:20]:  # limit tokens to avoid query explosion
+            for m in older_msgs:
+                if m["id"] not in seen_ids and token in m["content"]:
+                    retrieved.append(m)
+                    seen_ids.add(m["id"])
+        # Sort by original position
+        retrieved.sort(key=lambda m: m["id"])
+
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    messages.extend(history)
+    for m in retrieved:
+        messages.append({"role": m["role"], "content": m["content"]})
+    for m in window_msgs:
+        messages.append({"role": m["role"], "content": m["content"]})
 
     def generate():
         client = _get_llm_client()

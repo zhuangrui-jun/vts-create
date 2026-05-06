@@ -3,6 +3,7 @@ import random
 from pathlib import Path
 from sqlalchemy import text
 from app.db.database import get_session_factory
+from app.config.text_utils import tokenize
 
 KEYWORDS_FILE = Path(__file__).resolve().parent.parent.parent.parent / "scripts" / "sticker_keyword_output" / "unique_keywords.txt"
 
@@ -34,22 +35,13 @@ def _ensure_keywords_table():
         db.close()
 
 
-def _tokenize(text: str) -> list[str]:
-    """Extract all 2-4 char substrings from text."""
-    tokens = []
-    for size in (4, 3, 2):
-        for i in range(len(text) - size + 1):
-            tokens.append(text[i:i + size])
-    return tokens
-
-
 def match_sticker(user_message: str) -> tuple[str, str] | None:
     _ensure_keywords_table()
 
     factory = get_session_factory()
     db = factory()
     try:
-        tokens = _tokenize(user_message)
+        tokens = tokenize(user_message)
 
         # Try to find matching keywords, prefer longer matches
         best_keyword = None
