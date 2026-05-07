@@ -25,10 +25,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
-SYSTEM_PROMPT = os.environ.get(
-    "CHARACTER_PERSONA",
-    "你是一个温柔、优雅的AI角色。用中文回复，语气亲切自然。",
-)
+from app.config.character_card import CHARACTER_PROMPT
+
+SYSTEM_PROMPT = os.environ.get("CHARACTER_PERSONA") or CHARACTER_PROMPT
 
 EMOTION_PROMPT = """根据你上一条回复的内容，判断角色当前的情绪状态。
 只能从以下选项中选择一个：happy, very_happy, embarrassed, sad, neutral
