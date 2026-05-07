@@ -6,7 +6,7 @@ from urllib.error import URLError
 
 logger = logging.getLogger(__name__)
 
-BOCHA_URL = "https://api.bocha.cn/v1/ai-search"
+BOCHA_URL = "https://api.bochaai.com/v1/web-search"
 
 
 def search(query: str, count: int = 5) -> str:
@@ -18,9 +18,8 @@ def search(query: str, count: int = 5) -> str:
     body = json.dumps({
         "query": query,
         "freshness": "noLimit",
+        "summary": True,
         "count": count,
-        "answer": False,
-        "stream": False,
     }).encode("utf-8")
 
     req = Request(BOCHA_URL, data=body, method="POST")
@@ -28,7 +27,7 @@ def search(query: str, count: int = 5) -> str:
     req.add_header("Content-Type", "application/json")
 
     try:
-        with urlopen(req, timeout=10) as resp:
+        with urlopen(req, timeout=15) as resp:
             data = json.loads(resp.read().decode("utf-8"))
     except URLError as e:
         logger.error("Bocha search error: %s", e)
@@ -37,15 +36,20 @@ def search(query: str, count: int = 5) -> str:
         logger.error("Bocha search error: %s", e)
         return "搜索暂时不可用"
 
-    # Parse new API response format: messages[].content (JSON string) contains value[]
-    results = []
-    for msg in data.get("messages", []):
-        if msg.get("content_type") == "webpage":
-            try:
-                inner = json.loads(msg["content"])
-                results.extend(inner.get("value", []))
-            except (json.JSONDecodeError, KeyError) as e:
-                logger.warning("Failed to parse webpage content: %s", e)
+    # Primary: /v1/web-search wraps response in data.data.webPages.value[]
+    inner = data.get("data", data)
+    web_pages = inner.get("webPages", {})
+    results = list(web_pages.get("value", []))
+
+    if not results:
+        # Fallback: /v1/ai-search returns messages[].content (JSON string) with value[]
+        for msg in data.get("messages", []):
+            if msg.get("content_type") == "webpage":
+                try:
+                    inner = json.loads(msg["content"])
+                    results.extend(inner.get("value", []))
+                except (json.JSONDecodeError, KeyError):
+                    pass
 
     if not results:
         return f"未找到关于\"{query}\"的相关结果"

@@ -36,7 +36,9 @@ def _get_client():
 
 
 def context_assembly(state: GraphState) -> GraphState:
-    state["assembled_messages"] = list(state["history_messages"])
+    messages = list(state["history_messages"])
+    state["assembled_messages"] = messages
+    logger.info("Context assembled: %d messages", len(messages))
     return state
 
 
@@ -57,6 +59,8 @@ def decide_search(state: GraphState) -> GraphState:
     )
     content = (response.choices[0].message.content or "NO").strip()
 
+    logger.info("Search classifier response: %s", content)
+
     if content.startswith("SEARCH:"):
         query = content[len("SEARCH:"):].strip()
         state["search_query"] = query if query else user_msg
@@ -64,7 +68,7 @@ def decide_search(state: GraphState) -> GraphState:
         logger.info("Search needed: query=%s", state["search_query"])
     else:
         state["needs_search"] = False
-        logger.debug("No search needed for: %s", user_msg)
+        logger.info("No search needed for: %s", user_msg)
 
     return state
 
@@ -79,8 +83,10 @@ def execute_search(state: GraphState) -> GraphState:
         state["search_results"] = result
         # Check if results are empty or unusable
         if "未找到关于" in result or "搜索暂时不可用" in result or "搜索功能未配置" in result:
-            logger.warning("Search returned no useful results, skipping injection")
+            logger.warning("Search returned no useful results: %s", result[:200])
             state["needs_search"] = False
+        else:
+            logger.info("Search results (%d chars): %s", len(result), result[:500])
     except Exception as e:
         logger.error("Search failed: %s", e)
         state["needs_search"] = False
@@ -102,6 +108,7 @@ def assemble_context(state: GraphState) -> GraphState:
                 f"[用户问题：{last['content']}]"
             )
             messages[-1] = {"role": "user", "content": augmented_content}
+            logger.info("Search results injected into user message, final context: %d messages", len(messages))
 
     state["assembled_messages"] = messages
     return state
