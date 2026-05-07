@@ -34,3 +34,6 @@ Windows PowerShell 激活虚拟环境：
 
 pip install -r requirements.txt
 uvicorn app.main:app --reload --host localhost --port 8000
+
+
+特别鸣谢bilibili @雪熊企划的live2d 模型
